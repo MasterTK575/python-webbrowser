@@ -1,9 +1,9 @@
 import tkinter
 import tkinter.font
 
+from src.HTMLParser import HTMLParser, print_tree
 from src.Layout import Layout
 from src.URL import URL
-from src.Utils import Text, Tag
 
 WIDTH, HEIGHT = 800, 600
 HORIZONTAL_STEP, VERTICAL_STEP = 13, 18
@@ -12,6 +12,7 @@ SCROLL_STEP = 100
 
 class Browser:
     def __init__(self) -> None:
+        self.nodes = None
         self.display_list = None
         self.scroll = 0
         self.window = tkinter.Tk()
@@ -27,8 +28,9 @@ class Browser:
 
     def load(self, url: URL) -> None:
         body = url.request()
-        text = lex(body)
-        self.display_list = Layout(text).display_list
+        self.nodes = HTMLParser(body).parse()
+        self.display_list = Layout(self.nodes).display_list
+        print_tree(self.nodes)
         self.draw()
 
     def draw(self) -> None:
@@ -47,29 +49,6 @@ class Browser:
     def scrollup(self, e):
         self.scroll -= SCROLL_STEP
         self.draw()
-
-
-def lex(body: str) -> list[Text | Tag]:
-    out = []
-    buffer = ""
-    in_tag = False
-    for c in body:
-        if c == "<":
-            in_tag = True
-            if buffer:
-                out.append(Text(buffer))
-            buffer = ""
-        elif c == ">":
-            in_tag = False
-            out.append(Tag(buffer))
-            buffer = ""
-        else:
-            buffer += c
-
-    if not in_tag and buffer:
-        out.append(Text(buffer))
-
-    return out
 
 
 if __name__ == "__main__":

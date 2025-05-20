@@ -2,7 +2,8 @@ import tkinter
 from tkinter.font import Font
 from typing import Literal
 
-from src.Utils import Tag, Text
+from src.Element import Element
+from src.Text import Text
 
 WIDTH, HEIGHT = 800, 600
 HORIZONTAL_STEP, VERTICAL_STEP = 13, 18
@@ -10,7 +11,7 @@ FONTS = {}
 
 
 class Layout:
-    def __init__(self, tokens: list[Text | Tag]):
+    def __init__(self, root: Element):
         self.display_list = []
         self.line = []
         self.cursor_x = HORIZONTAL_STEP
@@ -19,16 +20,47 @@ class Layout:
         self.style = "roman"
         self.size = 12
 
-        for tok in tokens:
-            if isinstance(tok, Text):
-                self.words(tok)
-
-            elif isinstance(tok, Tag):
-                self.tags(tok)
+        self.recurse(root)
 
         self.flush()
 
-    def flush(self):
+    def recurse(self, tree: Text | Element) -> None:
+        if isinstance(tree, Text):
+            for word in tree.text.split():
+                self.word(word)
+        else:  # Element
+            self.open_tag(tree.tag)
+            for child in tree.children:
+                self.recurse(child)
+            self.close_tag(tree.tag)
+
+    def open_tag(self, tag: str) -> None:
+        if tag == "i":
+            self.style = "italic"
+        elif tag == "b":
+            self.weight = "bold"
+        elif tag == "small":
+            self.size -= 2
+        elif tag == "big":
+            self.size += 4
+        elif tag == "br":
+            self.flush()
+        # p tag doesn't need special handling when opening
+
+    def close_tag(self, tag: str) -> None:
+        if tag == "i":
+            self.style = "roman"
+        elif tag == "b":
+            self.weight = "normal"
+        elif tag == "small":
+            self.size += 2
+        elif tag == "big":
+            self.size -= 4
+        elif tag == "p":
+            self.flush()
+            self.cursor_y += VERTICAL_STEP  # for extra gap in paragraphs
+
+    def flush(self) -> None:
         if not self.line:
             return
         metrics = [font.metrics() for _, _, font in self.line]
@@ -45,39 +77,15 @@ class Layout:
         self.cursor_x = HORIZONTAL_STEP
         self.line = []
 
-    def words(self, tok: Text):
-        for word in tok.text.split():
-            font = get_font(self.size, self.weight, self.style)
-            word_width = font.measure(word)
+    def word(self, word: str) -> None:
+        font = get_font(self.size, self.weight, self.style)
+        word_width = font.measure(word)
 
-            if self.cursor_x + word_width + HORIZONTAL_STEP > WIDTH:
-                self.flush()
-
-            self.line.append((self.cursor_x, word, font))
-            self.cursor_x += word_width + font.measure(" ")
-
-    def tags(self, tok: Tag):
-        if tok.tag == "i":
-            self.style = "italic"
-        elif tok.tag == "/i":
-            self.style = "roman"
-        elif tok.tag == "b":
-            self.weight = "bold"
-        elif tok.tag == "/b":
-            self.weight = "normal"
-        elif tok.tag == "small":
-            self.size -= 2
-        elif tok.tag == "/small":
-            self.size += 2
-        elif tok.tag == "big":
-            self.size += 4
-        elif tok.tag == "/big":
-            self.size -= 4
-        elif tok.tag == "br":
+        if self.cursor_x + word_width + HORIZONTAL_STEP > WIDTH:
             self.flush()
-        elif tok.tag == "/p":
-            self.flush()
-            self.cursor_y += VERTICAL_STEP  # for extra gap in paragraphs
+
+        self.line.append((self.cursor_x, word, font))
+        self.cursor_x += word_width + font.measure(" ")
 
 
 def get_font(size: int, weight: Literal["normal", "bold"], style: Literal["roman", "italic"]) -> Font:
