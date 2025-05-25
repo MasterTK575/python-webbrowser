@@ -1,19 +1,18 @@
 import tkinter
 import tkinter.font
 
+from src.BlockLayout import BlockLayout
+from src.Constants import *
+from src.DocumentLayout import DocumentLayout
 from src.HTMLParser import HTMLParser, print_tree
-from src.Layout import Layout
 from src.URL import URL
-
-WIDTH, HEIGHT = 800, 600
-HORIZONTAL_STEP, VERTICAL_STEP = 13, 18
-SCROLL_STEP = 100
 
 
 class Browser:
     def __init__(self) -> None:
+        self.document = None
         self.nodes = None
-        self.display_list = None
+        self.display_list = []
         self.scroll = 0
         self.window = tkinter.Tk()
         self.canvas = tkinter.Canvas(
@@ -29,26 +28,39 @@ class Browser:
     def load(self, url: URL) -> None:
         body = url.request()
         self.nodes = HTMLParser(body).parse()
-        self.display_list = Layout(self.nodes).display_list
-        print_tree(self.nodes)
+        self.document = DocumentLayout(self.nodes)
+        self.document.layout()
+        paint_tree(self.document, self.display_list)
         self.draw()
+
+        # for debugging purposes
+        print_tree(self.nodes)
+        print_tree(self.document)
 
     def draw(self) -> None:
         self.canvas.delete("all")
-        for x, y, word, font in self.display_list:
-            if y > self.scroll + HEIGHT:
+        for cmd in self.display_list:
+            if cmd.top > self.scroll + HEIGHT:
                 continue
-            if y + VERTICAL_STEP < self.scroll:
+            if cmd.bottom < self.scroll:
                 continue
-            self.canvas.create_text(x, y - self.scroll, text=word, font=font, anchor='nw')
+            cmd.execute(self.scroll, self.canvas)
 
     def scrolldown(self, e):
-        self.scroll += SCROLL_STEP
+        max_y = max(self.document.height + 2 * VSTEP - HEIGHT, 0)
+        self.scroll = min(self.scroll + SCROLL_STEP, max_y)
         self.draw()
 
     def scrollup(self, e):
         self.scroll -= SCROLL_STEP
         self.draw()
+
+
+def paint_tree(layout_object: DocumentLayout | BlockLayout, display_list: list) -> None:
+    display_list.extend(layout_object.paint())
+
+    for child in layout_object.children:
+        paint_tree(child, display_list)
 
 
 if __name__ == "__main__":
