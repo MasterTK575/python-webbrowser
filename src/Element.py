@@ -8,5 +8,7 @@ class Element:
         self.children = []
         self.parent = parent
 
+        self.style = {}
+
     def __repr__(self):
         return "<" + self.tag + ">"

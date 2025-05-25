@@ -7,5 +7,7 @@ class Text:
         self.children = []
         self.parent = parent
 
+        self.style = {}
+
     def __repr__(self):
         return repr(self.text)
