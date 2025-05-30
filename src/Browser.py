@@ -1,13 +1,13 @@
 import tkinter
 import tkinter.font
 
-from src.BlockLayout import BlockLayout
 from src.CSSParser import CSSParser, cascade_priority, style
 from src.Constants import *
-from src.DocumentLayout import DocumentLayout
 from src.Element import Element
 from src.HTMLParser import HTMLParser, print_tree
 from src.URL import URL
+from src.layout.BlockLayout import BlockLayout
+from src.layout.DocumentLayout import DocumentLayout
 
 DEFAULT_STYLE_SHEET = CSSParser(open("browser.css").read()).parse()
 

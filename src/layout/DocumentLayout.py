@@ -1,6 +1,6 @@
-from src.BlockLayout import BlockLayout
 from src.Constants import *
 from src.Element import Element
+from src.layout.BlockLayout import BlockLayout
 
 
 class DocumentLayout:

@@ -8,6 +8,8 @@ from src.DrawRect import DrawRect
 from src.DrawText import DrawText
 from src.Element import Element
 from src.Text import Text
+from src.layout.LineLayout import LineLayout
+from src.layout.TextLayout import TextLayout
 
 FONTS = {}
 
@@ -97,7 +99,8 @@ class BlockLayout:
 
     def layout_mode(self) -> Literal["inline", "block"]:
         """
-        inline: basically leaf nodes, so no child elements (e.g. text) \n
+        inline: basically leaf nodes, so no child elements (e.g. text)
+
         block: html block elements that contain other elements
         """
         if isinstance(self.node, Text):
@@ -149,11 +152,21 @@ class BlockLayout:
         font = get_font(size, weight, style)
         w = font.measure(word)
 
-        if self.cursor_x + w > self.width:
-            self.flush()
+        line = self.children[-1]
+        previous_word = line.children[-1] if line.children else None
+        text = TextLayout(node, word, line, previous_word)
+        line.children.append(text)
 
-        self.line.append((self.cursor_x, word, font, color))
+        if self.cursor_x + w > self.width:
+            self.new_line()
+
         self.cursor_x += w + font.measure(" ")
+
+    def new_line(self):
+        self.cursor_x = 0
+        last_line = self.children[-1] if self.children else None
+        new_line = LineLayout(self.node, self, last_line)
+        self.children.append(new_line)
 
 
 def get_font(size: int, weight: Literal["normal", "bold"], style: Literal["roman", "italic"]) -> Font:
