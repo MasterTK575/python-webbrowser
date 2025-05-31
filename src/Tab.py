@@ -20,8 +20,10 @@ class Tab:
         self.root = None
         self.display_list = []
         self.scroll = 0
+        self.history = []
 
     def load(self, url: URL) -> None:
+        self.history.append(url)
         self.url = url
         body = url.request()
 
@@ -50,6 +52,12 @@ class Tab:
 
         self.display_list = []  # reset display list to remove old elements when loading a new page
         paint_tree(self.document, self.display_list)
+
+    def go_back(self):
+        if len(self.history) > 1:
+            self.history.pop()  # remove current page
+            back = self.history.pop()
+            self.load(back)
 
     def draw(self, canvas: Canvas, offset):
         for cmd in self.display_list:
