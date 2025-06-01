@@ -11,8 +11,8 @@ class DrawText:
         self.font = font
         self.bottom = y1 + font.metrics("linespace")
         self.color = color
-        self.rect = Rect(self.left, self.top,
-                         self.font.measure(self.text), self.bottom)
+        self.rect = Rect(x1, y1,
+                         x1 + font.measure(text), self.bottom)
 
     def execute(self, scroll, canvas: Canvas):
         canvas.create_text(

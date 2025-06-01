@@ -75,9 +75,7 @@ class Tab:
         self.scroll -= SCROLL_STEP
 
     def click(self, x: int, y: int) -> None:
-        # x and y: screen coordinates
         y += self.scroll  # page coordinates (account for scroll)
-
         # meaning element can't be on the right of the click
         # and also starting pos + width has to overlap the click position
         objs = [obj for obj in tree_to_list(self.document, [])
