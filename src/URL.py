@@ -21,7 +21,7 @@ class URL:
             self.port = int(port)
         self.path = "/" + url
 
-    def request(self) -> str:
+    def request(self, payload: str | None = None) -> str:
         # setup tcp connection
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
         s.connect((self.host, self.port))
@@ -30,9 +30,16 @@ class URL:
             s = ctx.wrap_socket(s, server_hostname=self.host)
 
         # send request
-        request = "GET {} HTTP/1.0\r\n".format(self.path)
+        method = "POST" if payload else "GET"
+        request = "{} {} HTTP/1.0\r\n".format(method, self.path)
         request += "Host: {}\r\n".format(self.host)
-        request += "\r\n"
+        if payload:  # Content-Length is required for POST requests
+            length = len(payload.encode("utf8"))  # length in bytes
+            request += "Content-Length: {}\r\n".format(length)
+        request += "\r\n"  # end of headers
+        if payload:
+            request += payload
+
         s.send(request.encode("utf8"))
 
         # read response - e.g.: HTTP/1.0 200 OK

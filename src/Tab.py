@@ -1,4 +1,5 @@
 from tkinter import Canvas
+from urllib import parse
 
 from src.CSSParser import CSSParser, cascade_priority, style
 from src.Constants import *
@@ -24,10 +25,11 @@ class Tab:
         self.history = []
         self.focus = None
 
-    def load(self, url: URL, payload=None) -> None:
+    def load(self, url: URL, payload: str | None = None) -> None:
+        self.scroll = 0
         self.history.append(url)
         self.url = url
-        body = url.request()
+        body = url.request(payload)
 
         self.nodes = HTMLParser(body).parse()
         self.rules = DEFAULT_STYLE_SHEET.copy()
@@ -107,10 +109,31 @@ class Tab:
                 self.focus.is_focused = True
                 elt.attributes["value"] = ""
                 return self.render()
+            elif elt.tag == "button":
+                while elt:
+                    if elt.tag == "form" and "action" in elt.attributes:
+                        return self.submit_form(elt)
+                    elt = elt.parent
             elt = elt.parent
 
         self.render()
         return None
+
+    def submit_form(self, elt):
+        inputs = [node for node in tree_to_list(elt, [])
+                  if isinstance(node, Element)
+                  and node.tag == "input"
+                  and "name" in node.attributes]
+        body = ""
+        for input in inputs:
+            name = input.attributes["name"]
+            value = input.attributes.get("value", "")
+            name = parse.quote(name)
+            value = parse.quote(value)
+            body += "&" + name + "=" + value
+        body = body[1:]
+        url = self.url.resolve(elt.attributes["action"])
+        self.load(url, body)
 
 
 def paint_tree(layout_object: DocumentLayout | BlockLayout, display_list: list) -> None:
