@@ -14,24 +14,26 @@ DEFAULT_STYLE_SHEET = CSSParser(open("browser.css").read()).parse()
 
 class Tab:
     def __init__(self, tab_height) -> None:
+        self.rules = None
         self.tab_height = tab_height
         self.url: URL | None = None
         self.document = None
-        self.root = None
+        self.nodes = None
         self.display_list = []
         self.scroll = 0
         self.history = []
+        self.focus = None
 
-    def load(self, url: URL) -> None:
+    def load(self, url: URL, payload=None) -> None:
         self.history.append(url)
         self.url = url
         body = url.request()
 
-        self.root = HTMLParser(body).parse()
-        rules = DEFAULT_STYLE_SHEET.copy()
+        self.nodes = HTMLParser(body).parse()
+        self.rules = DEFAULT_STYLE_SHEET.copy()
 
         links = [node.attributes["href"]
-                 for node in tree_to_list(self.root, [])
+                 for node in tree_to_list(self.nodes, [])
                  if isinstance(node, Element)
                  and node.tag == "link"
                  and node.attributes.get("rel") == "stylesheet"
@@ -43,14 +45,15 @@ class Tab:
                 body = style_url.request()
             except Exception:
                 continue
-            rules.extend(CSSParser(body).parse())
+            self.rules.extend(CSSParser(body).parse())
 
-        style(self.root, sorted(rules, key=cascade_priority))
+        self.render()
 
-        self.document = DocumentLayout(self.root)
+    def render(self):
+        style(self.nodes, sorted(self.rules, key=cascade_priority))
+        self.document = DocumentLayout(self.nodes)
         self.document.layout()
-
-        self.display_list = []  # reset display list to remove old elements when loading a new page
+        self.display_list = []
         paint_tree(self.document, self.display_list)
 
     def go_back(self):
@@ -74,16 +77,23 @@ class Tab:
     def scrollup(self):
         self.scroll -= SCROLL_STEP
 
+    def keypress(self, char):
+        if self.focus:
+            self.focus.attributes["value"] += char
+            self.render()
+
     def click(self, x: int, y: int) -> None:
-        y += self.scroll  # page coordinates (account for scroll)
-        # meaning element can't be on the right of the click
-        # and also starting pos + width has to overlap the click position
+        if self.focus:
+            self.focus.is_focused = False
+        self.focus = None
+
+        y += self.scroll
         objs = [obj for obj in tree_to_list(self.document, [])
                 if obj.x <= x < obj.x + obj.width
-                and obj.y <= y < obj.y + obj.height]  # get layout objects
+                and obj.y <= y < obj.y + obj.height]
 
         if not objs:
-            return None
+            return self.render()
 
         elt = objs[-1].node  # get most specific element
         while elt:
@@ -92,13 +102,20 @@ class Tab:
             elif elt.tag == "a" and "href" in elt.attributes:
                 url = self.url.resolve(elt.attributes["href"])
                 return self.load(url)
+            elif elt.tag == "input":
+                self.focus = elt
+                self.focus.is_focused = True
+                elt.attributes["value"] = ""
+                return self.render()
             elt = elt.parent
 
+        self.render()
         return None
 
 
 def paint_tree(layout_object: DocumentLayout | BlockLayout, display_list: list) -> None:
-    display_list.extend(layout_object.paint())
+    if layout_object.should_paint():
+        display_list.extend(layout_object.paint())
 
     for child in layout_object.children:
         paint_tree(child, display_list)

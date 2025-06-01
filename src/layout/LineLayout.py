@@ -36,5 +36,8 @@ class LineLayout:
 
         self.height = 1.25 * (max_ascent + max_descent)
 
+    def should_paint(self) -> bool:
+        return True
+
     def paint(self):
         return []

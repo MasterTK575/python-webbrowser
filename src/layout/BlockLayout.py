@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Literal
 
+from src.Constants import INPUT_WIDTH_PX
 from src.DrawRect import DrawRect
 from src.Element import Element
 from src.Rect import Rect
 from src.Text import Text
 from src.layout.Fonts import get_font
+from src.layout.InputLayout import InputLayout
 from src.layout.LineLayout import LineLayout
 from src.layout.TextLayout import TextLayout
 
@@ -72,20 +74,16 @@ class BlockLayout:
         return cmds
 
     def layout_mode(self) -> Literal["inline", "block"]:
-        """
-        inline: basically leaf nodes, so no child elements (e.g. text)
-
-        block: html block elements that contain other elements
-        """
         if isinstance(self.node, Text):
             return "inline"
         elif any([isinstance(child, Element) and
                   child.tag in BLOCK_ELEMENTS
                   for child in self.node.children]):
             return "block"
-        elif self.node.children:  # when there are children, but they are inline-level tags (e.g. <span>)
+        # why children? because <p>This is some text.</p> would have a Text("This is some text.") child node
+        elif self.node.children or self.node.tag == "input":
             return "inline"
-        else:
+        else:  # fallback - any self-closing tag or empty element (e.g. <div></div>)
             return "block"
 
     def recurse(self, node: Text | Element) -> None:
@@ -95,8 +93,11 @@ class BlockLayout:
         else:  # node is an Element
             if node.tag == "br":
                 self.new_line()
-            for child in node.children:
-                self.recurse(child)
+            elif node.tag == "input" or node.tag == "button":
+                self.input(node)
+            else:
+                for child in node.children:
+                    self.recurse(child)
 
     def word(self, node: Text, word: str) -> None:
         weight = node.style["font-weight"]
@@ -115,6 +116,28 @@ class BlockLayout:
         previous_word = line.children[-1] if line.children else None
         text = TextLayout(node, word, line, previous_word)
         line.children.append(text)
+
+    def input(self, node):
+        w = INPUT_WIDTH_PX
+        if self.cursor_x + w > self.width:
+            self.new_line()
+        line = self.children[-1]
+        previous_word = line.children[-1] if line.children else None
+        input = InputLayout(node, line, previous_word)
+        line.children.append(input)
+
+        weight = node.style["font-weight"]
+        style = node.style["font-style"]
+        if style == "normal":
+            style = "roman"
+        size = int(float(node.style["font-size"][:-2]) * .75)
+        font = get_font(size, weight, style)
+
+        self.cursor_x += w + font.measure(" ")
+
+    def should_paint(self):
+        return isinstance(self.node, Text) or \
+            (self.node.tag != "input" and self.node.tag != "button")
 
     def new_line(self):
         self.cursor_x = 0
