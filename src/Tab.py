@@ -1,15 +1,14 @@
 from tkinter import Canvas
 from urllib import parse
 
-import dukpy
-
 from src.CSSParser import CSSParser, cascade_priority, style
 from src.Constants import *
 from src.Element import Element
 from src.HTMLParser import HTMLParser
+from src.JSContext import JSContext
 from src.Text import Text
 from src.URL import URL
-from src.layout.BlockLayout import BlockLayout
+from src.Utils import tree_to_list, paint_tree
 from src.layout.DocumentLayout import DocumentLayout
 
 DEFAULT_STYLE_SHEET = CSSParser(open("browser.css").read()).parse()
@@ -17,6 +16,7 @@ DEFAULT_STYLE_SHEET = CSSParser(open("browser.css").read()).parse()
 
 class Tab:
     def __init__(self, tab_height) -> None:
+        self.js = None
         self.rules = None
         self.tab_height = tab_height
         self.url: URL | None = None
@@ -55,13 +55,14 @@ class Tab:
                    if isinstance(node, Element)
                    and node.tag == "script"
                    and "src" in node.attributes]
+        self.js = JSContext(self)
         for script in scripts:
             script_url = url.resolve(script)
             try:
                 body = script_url.request()
             except Exception:
                 continue
-            print("Script returned: ", dukpy.evaljs(body))
+            self.js.run(script, body)
 
         self.render()
 
@@ -95,6 +96,9 @@ class Tab:
 
     def keypress(self, char):
         if self.focus:
+            if self.js.dispatch_event("keydown", self.focus):
+                return
+            
             self.focus.attributes["value"] += char
             self.render()
 
@@ -120,14 +124,23 @@ class Tab:
             if isinstance(elt, Text):
                 pass
             elif elt.tag == "a" and "href" in elt.attributes:
+                if self.js.dispatch_event("click", elt):
+                    return None
+
                 url = self.url.resolve(elt.attributes["href"])
                 return self.load(url)
             elif elt.tag == "input":
+                if self.js.dispatch_event("click", elt):
+                    return None
+
                 self.focus = elt
                 self.focus.is_focused = True
                 elt.attributes["value"] = ""
                 return self.render()
             elif elt.tag == "button":
+                if self.js.dispatch_event("click", elt):
+                    return None
+
                 while elt:
                     if elt.tag == "form" and "action" in elt.attributes:
                         return self.submit_form(elt)
@@ -138,6 +151,9 @@ class Tab:
         return None
 
     def submit_form(self, elt):
+        if self.js.dispatch_event("submit", elt):
+            return
+
         inputs = [node for node in tree_to_list(elt, [])
                   if isinstance(node, Element)
                   and node.tag == "input"
@@ -152,18 +168,3 @@ class Tab:
         body = body[1:]
         url = self.url.resolve(elt.attributes["action"])
         self.load(url, body)
-
-
-def paint_tree(layout_object: DocumentLayout | BlockLayout, display_list: list) -> None:
-    if layout_object.should_paint():
-        display_list.extend(layout_object.paint())
-
-    for child in layout_object.children:
-        paint_tree(child, display_list)
-
-
-def tree_to_list(tree, list):
-    list.append(tree)
-    for child in tree.children:
-        tree_to_list(child, list)
-    return list
