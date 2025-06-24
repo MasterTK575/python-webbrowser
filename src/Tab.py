@@ -1,6 +1,8 @@
 from tkinter import Canvas
 from urllib import parse
 
+import dukpy
+
 from src.CSSParser import CSSParser, cascade_priority, style
 from src.Constants import *
 from src.Element import Element
@@ -40,7 +42,6 @@ class Tab:
                  and node.tag == "link"
                  and node.attributes.get("rel") == "stylesheet"
                  and "href" in node.attributes]
-
         for link in links:
             style_url = url.resolve(link)
             try:
@@ -48,6 +49,19 @@ class Tab:
             except Exception:
                 continue
             self.rules.extend(CSSParser(body).parse())
+
+        scripts = [node.attributes["src"] for node
+                   in tree_to_list(self.nodes, [])
+                   if isinstance(node, Element)
+                   and node.tag == "script"
+                   and "src" in node.attributes]
+        for script in scripts:
+            script_url = url.resolve(script)
+            try:
+                body = script_url.request()
+            except Exception:
+                continue
+            print("Script returned: ", dukpy.evaljs(body))
 
         self.render()
 

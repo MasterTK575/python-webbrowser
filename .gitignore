@@ -44,3 +44,6 @@ nb-configuration.xml
 
 *.secret
 *.secrets
+
+# python
+__pycache__/

@@ -6,22 +6,33 @@ class URL:
 
     # https://example.com:8080/path/to/resource
     def __init__(self, url: str) -> None:
-        self.scheme, url = url.split("://", 1)
-        assert self.scheme in ["http", "https"]
-        if self.scheme == "http":
-            self.port = 80
-        elif self.scheme == "https":
-            self.port = 443
+        self.host = None
+        self.port = None
 
-        if "/" not in url:
-            url = url + "/"
-        self.host, url = url.split("/", 1)
-        if ":" in self.host:
-            self.host, port = self.host.split(":", 1)
-            self.port = int(port)
-        self.path = "/" + url
+        self.scheme, url = url.split("://", 1)
+        assert self.scheme in ["http", "https", "file"]
+
+        if self.scheme == "file":
+            self.path = url
+
+        else:
+            if self.scheme == "http":
+                self.port = 80
+            elif self.scheme == "https":
+                self.port = 443
+
+            if "/" not in url:
+                url = url + "/"
+            self.host, url = url.split("/", 1)
+            if ":" in self.host:
+                self.host, port = self.host.split(":", 1)
+                self.port = int(port)
+            self.path = "/" + url
 
     def request(self, payload: str | None = None) -> str:
+        if self.scheme == "file":
+            return self.open_file()
+
         # setup tcp connection
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
         s.connect((self.host, self.port))
@@ -69,16 +80,26 @@ class URL:
                     dir, _ = dir.rsplit("/", 1)
             url = dir + "/" + url
 
-        if url.startswith("//"):
+        if self.scheme == "file":
+            return URL(self.scheme + "://" + url)
+        elif url.startswith("//"):
             return URL(self.scheme + ":" + url)
         else:
             return URL(self.scheme + "://" + self.host +
                        ":" + str(self.port) + url)
 
+    def open_file(self):
+        file = open(self.path, "r")
+        body = file.read()
+        file.close()
+        return body
+
     def __str__(self):
-        port_part = ":" + str(self.port)
+        port_part = ":" + str(self.port) if self.port else ""
+        host = self.host if self.host else ""
+
         if self.scheme == "https" and self.port == 443:
             port_part = ""
         if self.scheme == "http" and self.port == 80:
             port_part = ""
-        return self.scheme + "://" + self.host + port_part + self.path
+        return self.scheme + "://" + host + port_part + self.path
