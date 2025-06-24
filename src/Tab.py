@@ -97,7 +97,11 @@ class Tab:
         if not objs:
             return self.render()
 
-        elt = objs[-1].node  # get most specific element
+        # objs is a list since the layout objects can overlap
+        # i.e. a div containing a link, or a text inside a link
+        # the list contains the layout objects from the back to the front
+        # we then get the last one, so the one on top - the most specific one
+        elt = objs[-1].node
         while elt:
             if isinstance(elt, Text):
                 pass
