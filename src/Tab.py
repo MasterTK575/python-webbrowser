@@ -16,6 +16,7 @@ DEFAULT_STYLE_SHEET = CSSParser(open("browser.css").read()).parse()
 
 class Tab:
     def __init__(self, tab_height) -> None:
+        self.allowed_origins = None
         self.js = None
         self.rules = None
         self.tab_height = tab_height
@@ -29,12 +30,21 @@ class Tab:
 
     def load(self, url: URL, payload: str | None = None) -> None:
         self.scroll = 0
+
         self.history.append(url)
-        self.url = url
-        body = url.request(payload)
+        headers, body = url.request(self.url, payload)
+        self.url = url  # has to be set after request
 
         self.nodes = HTMLParser(body).parse()
         self.rules = DEFAULT_STYLE_SHEET.copy()
+
+        self.allowed_origins = None
+        if "content-security-policy" in headers:
+            csp = headers["content-security-policy"].split()
+            if len(csp) > 0 and csp[0] == "default-src":
+                self.allowed_origins = []
+                for origin in csp[1:]:
+                    self.allowed_origins.append(URL(origin).origin())
 
         links = [node.attributes["href"]
                  for node in tree_to_list(self.nodes, [])
@@ -44,8 +54,11 @@ class Tab:
                  and "href" in node.attributes]
         for link in links:
             style_url = url.resolve(link)
+            if not self.allowed_request(style_url):
+                print("Blocked stylesheet", link, "due to CSP")
+                continue
             try:
-                body = style_url.request()
+                header, body = style_url.request(url)
             except Exception:
                 continue
             self.rules.extend(CSSParser(body).parse())
@@ -58,13 +71,20 @@ class Tab:
         self.js = JSContext(self)
         for script in scripts:
             script_url = url.resolve(script)
+            if not self.allowed_request(script_url):
+                print("Blocked script", script, "due to CSP")
+                continue
             try:
-                body = script_url.request()
+                header, body = script_url.request(url)
             except Exception:
                 continue
             self.js.run(script, body)
 
         self.render()
+
+    def allowed_request(self, url):
+        return self.allowed_origins is None or \
+            url.origin() in self.allowed_origins
 
     def render(self):
         style(self.nodes, sorted(self.rules, key=cascade_priority))
@@ -98,7 +118,7 @@ class Tab:
         if self.focus:
             if self.js.dispatch_event("keydown", self.focus):
                 return
-            
+
             self.focus.attributes["value"] += char
             self.render()
 

@@ -1,5 +1,8 @@
 import socket
 import ssl
+from typing import Any
+
+from src.Constants import COOKIE_JAR
 
 
 class URL:
@@ -29,9 +32,9 @@ class URL:
                 self.port = int(port)
             self.path = "/" + url
 
-    def request(self, payload: str | None = None) -> str:
+    def request(self, referrer, payload: str | None = None) -> tuple[dict[Any, Any], str]:
         if self.scheme == "file":
-            return self.open_file()
+            return {}, self.open_file()
 
         # setup tcp connection
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
@@ -44,10 +47,22 @@ class URL:
         method = "POST" if payload else "GET"
         request = "{} {} HTTP/1.0\r\n".format(method, self.path)
         request += "Host: {}\r\n".format(self.host)
-        if payload:  # Content-Length is required for POST requests
+
+        if self.host in COOKIE_JAR:
+            cookie, params = COOKIE_JAR[self.host]
+            allow_cookie = True
+            if referrer and params.get("samesite", "none") == "lax":
+                if method != "GET":
+                    allow_cookie = self.host == referrer.host
+            if allow_cookie:
+                request += "Cookie: {}\r\n".format(cookie)
+
+        if payload:  # Content-Length is required for POST requests (that have a body)
             length = len(payload.encode("utf8"))  # length in bytes
             request += "Content-Length: {}\r\n".format(length)
-        request += "\r\n"  # end of headers
+
+        # end of headers
+        request += "\r\n"
         if payload:
             request += payload
 
@@ -61,12 +76,26 @@ class URL:
         while (line := response.readline()) != "\r\n":
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
+
+        if "set-cookie" in response_headers:
+            cookie = response_headers["set-cookie"]
+            params = {}
+            if ";" in cookie:
+                cookie, rest = cookie.split(";", 1)
+                for param in rest.split(";"):
+                    if '=' in param:
+                        param, value = param.split("=", 1)
+                    else:
+                        value = "true"
+                    params[param.strip().casefold()] = value.casefold()
+            COOKIE_JAR[self.host] = (cookie, params)
+
         assert "transfer-encoding" not in response_headers
         assert "content-encoding" not in response_headers
         content = response.read()
         s.close()
 
-        return content
+        return response_headers, content
 
     def resolve(self, url: str):
         if "://" in url:
@@ -93,6 +122,9 @@ class URL:
         body = file.read()
         file.close()
         return body
+
+    def origin(self):
+        return self.scheme + "://" + self.host + ":" + str(self.port)
 
     def __str__(self):
         port_part = ":" + str(self.port) if self.port else ""
