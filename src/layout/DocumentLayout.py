@@ -1,6 +1,6 @@
-from src.Constants import *
-from src.Element import Element
+from src.dom.Element import Element
 from src.layout.BlockLayout import BlockLayout
+from src.user_agent.Constants import *
 
 
 class DocumentLayout:

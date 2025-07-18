@@ -70,10 +70,10 @@ def do_request(session, method, url, headers, body) -> tuple[str, str]:
         params = form_decode(body)
         return do_login(session, params)
     elif method == "GET" and url == "/comment.js":
-        with open("comment.js") as f:
+        with open("server/comment.js") as f:
             return "200 OK", f.read()
     elif method == "GET" and url == "/comment.css":
-        with open("comment.css") as f:
+        with open("server/comment.css") as f:
             return "200 OK", f.read()
     elif method == "POST" and url == "/add":
         params = form_decode(body)

@@ -1,7 +1,7 @@
-from src.DescendantSelector import DescendantSelector
-from src.Element import Element
-from src.TagSelector import TagSelector
-from src.Text import Text
+from src.dom.Element import Element
+from src.dom.Text import Text
+from src.styling.DescendantSelector import DescendantSelector
+from src.styling.TagSelector import TagSelector
 
 INHERITED_PROPERTIES = {
     "font-size": "16px",
@@ -61,7 +61,9 @@ class CSSParser:
                 if why == ";":
                     self.literal(";")
                     self.whitespace()
-                else:  # if why was None we reached the end of the string
+                else:
+                    # why == None: end of the string
+                    # why == "}": end of the selector bodys
                     break
 
         return pairs
@@ -136,6 +138,7 @@ def style(node: Element | Text, rules: list[tuple[TagSelector | DescendantSelect
         parent_px = float(parent_font_size[:-2])
         node.style["font-size"] = str(node_pct * parent_px) + "px"
 
+    # recursively style children
     for child in node.children:
         style(child, rules)
 

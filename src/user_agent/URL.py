@@ -2,7 +2,7 @@ import socket
 import ssl
 from typing import Any
 
-from src.Constants import COOKIE_JAR
+from Constants import COOKIE_JAR
 
 
 class URL:
@@ -98,10 +98,10 @@ class URL:
         return response_headers, content
 
     def resolve(self, url: str):
-        if "://" in url:
+        if "://" in url:  # absolute URL
             return URL(url)
 
-        if not url.startswith("/"):
+        if not url.startswith("/"):  # path relative URL
             dir, _ = self.path.rsplit("/", 1)
             while url.startswith("../"):
                 _, url = url.split("/", 1)

@@ -1,5 +1,5 @@
-from src.Element import Element
-from src.Text import Text
+from src.dom.Element import Element
+from src.dom.Text import Text
 
 
 class HTMLParser:
@@ -17,23 +17,23 @@ class HTMLParser:
         self.unfinished = []
 
     def parse(self) -> Element:
-        text = ""
+        token = ""
         in_tag = False
         for c in self.body:
             if c == "<":
                 in_tag = True
-                if text:
-                    self.add_text(text)
-                text = ""
+                if token:
+                    self.add_text(token)  # empty text not possible
+                token = ""
             elif c == ">":
                 in_tag = False
-                self.add_tag(text)
-                text = ""
+                self.add_tag(token)  # empty tag is possible
+                token = ""
             else:
-                text += c
-        if not in_tag and text:
-            self.add_text(text)
-        return self.finish()
+                token += c
+        if not in_tag and token:
+            self.add_text(token)  # dump any remaining text
+        return self.finish()  # we handle missing closing tags, but not unfinished tags!
 
     def add_text(self, text: str) -> None:
         if text.isspace():

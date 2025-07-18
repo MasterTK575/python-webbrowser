@@ -1,5 +1,5 @@
-from src.DrawText import DrawText
-from src.layout.Fonts import get_font
+from src.drawing.DrawText import DrawText
+from src.styling.Fonts import get_font
 
 
 class TextLayout:

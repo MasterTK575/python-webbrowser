@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.Element import Element
-from src.TagSelector import TagSelector
-from src.Text import Text
+from src.dom.Element import Element
+from src.dom.Text import Text
+from src.styling.TagSelector import TagSelector
 
 
 class DescendantSelector:
@@ -15,6 +15,8 @@ class DescendantSelector:
     def matches(self, node: Element | Text) -> bool:
         if not self.descendant.matches(node):
             return False
+
+        # Laufe so lange nach oben, bis man passenden Vorfahren findet
         while node.parent:
             if self.ancestor.matches(node.parent):
                 return True

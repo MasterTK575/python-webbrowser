@@ -1,9 +1,9 @@
 import tkinter
 
-from src.Chrome import Chrome
-from src.Constants import WIDTH, HEIGHT
-from src.Tab import Tab
-from src.URL import URL
+from Chrome import Chrome
+from Constants import WIDTH, HEIGHT
+from Tab import Tab
+from URL import URL
 
 
 class Browser:
@@ -49,6 +49,7 @@ class Browser:
         else:
             self.focus = "content"
             self.chrome.blur()
+            # entferne chrome höhe und die relative tab höhe zu bekommen
             tab_y = e.y - self.chrome.bottom
             self.active_tab.click(e.x, tab_y)
 

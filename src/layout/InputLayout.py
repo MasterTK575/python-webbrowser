@@ -1,10 +1,10 @@
-from src.Constants import INPUT_WIDTH_PX
-from src.DrawLine import DrawLine
-from src.DrawRect import DrawRect
-from src.DrawText import DrawText
-from src.Rect import Rect
-from src.Text import Text
-from src.layout.Fonts import get_font
+from src.dom.Text import Text
+from src.drawing.DrawLine import DrawLine
+from src.drawing.DrawRect import DrawRect
+from src.drawing.DrawText import DrawText
+from src.layout.Rect import Rect
+from src.styling.Fonts import get_font
+from src.user_agent.Constants import INPUT_WIDTH_PX
 
 
 class InputLayout:

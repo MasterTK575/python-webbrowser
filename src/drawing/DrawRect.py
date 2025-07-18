@@ -1,4 +1,4 @@
-from src.Rect import Rect
+from src.layout.Rect import Rect
 
 
 class DrawRect:

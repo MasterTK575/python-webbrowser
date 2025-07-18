@@ -1,11 +1,12 @@
-from src.Constants import WIDTH
-from src.DrawLine import DrawLine
-from src.DrawOutline import DrawOutline
-from src.DrawRect import DrawRect
-from src.DrawText import DrawText
-from src.Rect import Rect
-from src.URL import URL
-from src.layout.Fonts import get_font
+from Constants import WIDTH
+from URL import URL
+
+from src.drawing.DrawLine import DrawLine
+from src.drawing.DrawOutline import DrawOutline
+from src.drawing.DrawRect import DrawRect
+from src.drawing.DrawText import DrawText
+from src.layout.Rect import Rect
+from src.styling.Fonts import get_font
 
 
 class Chrome:

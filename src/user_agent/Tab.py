@@ -1,17 +1,17 @@
 from tkinter import Canvas
 from urllib import parse
 
-from src.CSSParser import CSSParser, cascade_priority, style
-from src.Constants import *
-from src.Element import Element
-from src.HTMLParser import HTMLParser
-from src.JSContext import JSContext
-from src.Text import Text
-from src.URL import URL
-from src.Utils import tree_to_list, paint_tree
+from Constants import *
+from URL import URL
+from Utils import tree_to_list, paint_tree
+from src.dom.Element import Element
+from src.dom.HTMLParser import HTMLParser
+from src.dom.Text import Text
+from src.js.JSContext import JSContext
 from src.layout.DocumentLayout import DocumentLayout
+from src.styling.CSSParser import CSSParser, cascade_priority, style
 
-DEFAULT_STYLE_SHEET = CSSParser(open("browser.css").read()).parse()
+DEFAULT_STYLE_SHEET = CSSParser(open("user_agent/browser.css").read()).parse()
 
 
 class Tab:
@@ -127,7 +127,7 @@ class Tab:
             self.focus.is_focused = False
         self.focus = None
 
-        y += self.scroll
+        y += self.scroll  # y is a screen coordinate, we want page coordinate
         objs = [obj for obj in tree_to_list(self.document, [])
                 if obj.x <= x < obj.x + obj.width
                 and obj.y <= y < obj.y + obj.height]
@@ -138,17 +138,19 @@ class Tab:
         # objs is a list since the layout objects can overlap
         # i.e. a div containing a link, or a text inside a link
         # the list contains the layout objects from the back to the front
-        # we then get the last one, so the one on top - the most specific one
-        elt = objs[-1].node
+        # we then get the last one, so the one on top (in front) - the most specific one
+        elt = objs[-1].node  # get the html element
         while elt:
             if isinstance(elt, Text):
-                pass
+                pass  # pass damit wir keinen Fehler bei elt.tag etc. bekommen
+
             elif elt.tag == "a" and "href" in elt.attributes:
                 if self.js.dispatch_event("click", elt):
                     return None
 
                 url = self.url.resolve(elt.attributes["href"])
                 return self.load(url)
+
             elif elt.tag == "input":
                 if self.js.dispatch_event("click", elt):
                     return None
@@ -157,6 +159,7 @@ class Tab:
                 self.focus.is_focused = True
                 elt.attributes["value"] = ""
                 return self.render()
+
             elif elt.tag == "button":
                 if self.js.dispatch_event("click", elt):
                     return None
@@ -165,7 +168,8 @@ class Tab:
                     if elt.tag == "form" and "action" in elt.attributes:
                         return self.submit_form(elt)
                     elt = elt.parent
-            elt = elt.parent
+
+            elt = elt.parent  # walk up the dom
 
         self.render()
         return None

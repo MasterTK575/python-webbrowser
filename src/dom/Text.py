@@ -1,4 +1,4 @@
-from src.Element import Element
+from src.dom.Element import Element
 
 
 class Text:

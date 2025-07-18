@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import Literal
 
-from src.Constants import INPUT_WIDTH_PX
-from src.DrawRect import DrawRect
-from src.Element import Element
-from src.Rect import Rect
-from src.Text import Text
-from src.layout.Fonts import get_font
+from src.dom.Element import Element
+from src.dom.Text import Text
+from src.drawing.DrawRect import DrawRect
 from src.layout.InputLayout import InputLayout
 from src.layout.LineLayout import LineLayout
+from src.layout.Rect import Rect
 from src.layout.TextLayout import TextLayout
+from src.styling.Fonts import get_font
+from src.user_agent.Constants import INPUT_WIDTH_PX
 
 BLOCK_ELEMENTS = [
     "html", "body", "article", "section", "nav", "aside",
@@ -26,7 +26,7 @@ class BlockLayout:
     def __init__(self, node: Element, parent, previous: BlockLayout | None) -> None:
         self.node = node
         self.parent = parent
-        self.previous = previous
+        self.previous = previous  # sibling
         self.children = []
 
         self.width = None
@@ -57,10 +57,13 @@ class BlockLayout:
             self.new_line()
             self.recurse(self.node)
 
+        # layout all children recursively before finishing own layout
         for child in self.children:
             child.layout()
 
         # height is now height of all children elements (including line layouts)
+        # wenn BlockLayout nichts enthält (auch kein Text) ist Höhe von Linelayout 0
+        # dann Höhe von BlockLayout hier auch 0
         self.height = sum([child.height for child in self.children])
 
     def paint(self) -> list[DrawRect]:
@@ -80,7 +83,9 @@ class BlockLayout:
                   child.tag in BLOCK_ELEMENTS
                   for child in self.node.children]):
             return "block"
-        # why children? because <p>This is some text.</p> would have a Text("This is some text.") child node
+        # kein Kind ist ein Block Element
+        # heißt wenn trotzdem Kinder, muss das Text sein
+        # daher inline
         elif self.node.children or self.node.tag == "input":
             return "inline"
         else:  # fallback - any self-closing tag or empty element (e.g. <div></div>)
@@ -112,7 +117,7 @@ class BlockLayout:
             self.new_line()
         self.cursor_x += w + font.measure(" ")
 
-        line = self.children[-1]
+        line = self.children[-1]  # LineLayouts are direct children of BlockLayout
         previous_word = line.children[-1] if line.children else None
         text = TextLayout(node, word, line, previous_word)
         line.children.append(text)

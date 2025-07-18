@@ -1,10 +1,10 @@
 import dukpy
 
-from src.CSSParser import CSSParser
-from src.HTMLParser import HTMLParser
-from src.Utils import tree_to_list
+from src.dom.HTMLParser import HTMLParser
+from src.styling.CSSParser import CSSParser
+from src.user_agent.Utils import tree_to_list
 
-RUNTIME_JS = open("runtime.js").read()
+RUNTIME_JS = open("js/runtime.js").read()
 EVENT_DISPATCH_JS = \
     "new Node(dukpy.handle).dispatchEvent(new Event(dukpy.type))"
 
