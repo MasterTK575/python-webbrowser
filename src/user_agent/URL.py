@@ -92,6 +92,7 @@ class URL:
 
         assert "transfer-encoding" not in response_headers
         assert "content-encoding" not in response_headers
+
         content = response.read()
         s.close()
 

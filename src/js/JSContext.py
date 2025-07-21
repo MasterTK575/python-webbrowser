@@ -54,8 +54,9 @@ class JSContext:
         return not do_default
 
     def innerHTML_set(self, handle, s):
+        # hack um html fragmente zu parsen
         doc = HTMLParser("<html><body>" + s + "</body></html>").parse()
-        new_nodes = doc.children[0].children
+        new_nodes = doc.children[0].children  # root.body.children
         elt = self.handle_to_node[handle]
         elt.children = new_nodes
         for child in elt.children:

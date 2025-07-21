@@ -45,7 +45,7 @@ class BlockLayout:
         self.x = self.parent.x  # horizontal position always the same as the parent
         self.width = self.parent.width
 
-        mode = self.layout_mode()
+        mode = self.layout_mode()  # TODO: welchen layout Modus für die Kinder!!
         if mode == "block":
             previous = None
             for child in self.node.children:
@@ -65,16 +65,6 @@ class BlockLayout:
         # wenn BlockLayout nichts enthält (auch kein Text) ist Höhe von Linelayout 0
         # dann Höhe von BlockLayout hier auch 0
         self.height = sum([child.height for child in self.children])
-
-    def paint(self) -> list[DrawRect]:
-        cmds = []
-        bgcolor = self.node.style.get("background-color",
-                                      "transparent")
-        if bgcolor != "transparent":
-            rect = DrawRect(self.self_rect(), bgcolor)
-            cmds.append(rect)
-
-        return cmds
 
     def layout_mode(self) -> Literal["inline", "block"]:
         if isinstance(self.node, Text):
@@ -103,6 +93,12 @@ class BlockLayout:
             else:
                 for child in node.children:
                     self.recurse(child)
+
+    def new_line(self):
+        self.cursor_x = 0
+        last_line = self.children[-1] if self.children else None
+        new_line = LineLayout(self.node, self, last_line)
+        self.children.append(new_line)
 
     def word(self, node: Text, word: str) -> None:
         weight = node.style["font-weight"]
@@ -144,11 +140,15 @@ class BlockLayout:
         return isinstance(self.node, Text) or \
             (self.node.tag != "input" and self.node.tag != "button")
 
-    def new_line(self):
-        self.cursor_x = 0
-        last_line = self.children[-1] if self.children else None
-        new_line = LineLayout(self.node, self, last_line)
-        self.children.append(new_line)
+    def paint(self) -> list[DrawRect]:
+        cmds = []
+        bgcolor = self.node.style.get("background-color",
+                                      "transparent")
+        if bgcolor != "transparent":
+            rect = DrawRect(self.self_rect(), bgcolor)
+            cmds.append(rect)
+
+        return cmds
 
     def self_rect(self) -> Rect:
         return Rect(self.x, self.y,

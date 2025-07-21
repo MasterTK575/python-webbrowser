@@ -34,11 +34,11 @@ Node.prototype.addEventListener = function (type, listener) {
 Node.prototype.dispatchEvent = function (evt) {
     var type = evt.type;
     var handle = this.handle;
-    var list = (LISTENERS[handle] && LISTENERS[handle][type]) || [];
-    for (var i = 0; i < list.length; i++) {
-        list[i].call(this, evt);
+    var listeners = (LISTENERS[handle] && LISTENERS[handle][type]) || [];
+    for (var i = 0; i < listeners.length; i++) {
+        listeners[i].call(this, evt);  // set this to the node that the event was generated on
     }
-    return evt.do_default;
+    return evt.do_default;  // has call() prevented default on evt?
 }
 
 Object.defineProperty(Node.prototype, 'innerHTML', {

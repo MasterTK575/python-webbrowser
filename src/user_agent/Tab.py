@@ -46,23 +46,6 @@ class Tab:
                 for origin in csp[1:]:
                     self.allowed_origins.append(URL(origin).origin())
 
-        links = [node.attributes["href"]
-                 for node in tree_to_list(self.nodes, [])
-                 if isinstance(node, Element)
-                 and node.tag == "link"
-                 and node.attributes.get("rel") == "stylesheet"
-                 and "href" in node.attributes]
-        for link in links:
-            style_url = url.resolve(link)
-            if not self.allowed_request(style_url):
-                print("Blocked stylesheet", link, "due to CSP")
-                continue
-            try:
-                header, body = style_url.request(url)
-            except Exception:
-                continue
-            self.rules.extend(CSSParser(body).parse())
-
         scripts = [node.attributes["src"] for node
                    in tree_to_list(self.nodes, [])
                    if isinstance(node, Element)
@@ -79,6 +62,23 @@ class Tab:
             except Exception:
                 continue
             self.js.run(script, body)
+
+        links = [node.attributes["href"]
+                 for node in tree_to_list(self.nodes, [])
+                 if isinstance(node, Element)
+                 and node.tag == "link"
+                 and node.attributes.get("rel") == "stylesheet"
+                 and "href" in node.attributes]
+        for link in links:
+            style_url = url.resolve(link)
+            if not self.allowed_request(style_url):
+                print("Blocked stylesheet", link, "due to CSP")
+                continue
+            try:
+                header, body = style_url.request(url)
+            except Exception:
+                continue
+            self.rules.extend(CSSParser(body).parse())
 
         self.render()
 
@@ -128,6 +128,7 @@ class Tab:
         self.focus = None
 
         y += self.scroll  # y is a screen coordinate, we want page coordinate
+
         objs = [obj for obj in tree_to_list(self.document, [])
                 if obj.x <= x < obj.x + obj.width
                 and obj.y <= y < obj.y + obj.height]
@@ -142,14 +143,15 @@ class Tab:
         elt = objs[-1].node  # get the html element
         while elt:
             if isinstance(elt, Text):
-                pass  # pass damit wir keinen Fehler bei elt.tag etc. bekommen
+                pass  # if text just walk up the dom
 
             elif elt.tag == "a" and "href" in elt.attributes:
                 if self.js.dispatch_event("click", elt):
                     return None
 
                 url = self.url.resolve(elt.attributes["href"])
-                return self.load(url)
+                self.load(url)
+                return None
 
             elif elt.tag == "input":
                 if self.js.dispatch_event("click", elt):
@@ -158,7 +160,8 @@ class Tab:
                 self.focus = elt
                 self.focus.is_focused = True
                 elt.attributes["value"] = ""
-                return self.render()
+                self.render()
+                return None
 
             elif elt.tag == "button":
                 if self.js.dispatch_event("click", elt):
@@ -182,6 +185,7 @@ class Tab:
                   if isinstance(node, Element)
                   and node.tag == "input"
                   and "name" in node.attributes]
+
         body = ""
         for input in inputs:
             name = input.attributes["name"]
@@ -190,5 +194,6 @@ class Tab:
             value = parse.quote(value)
             body += "&" + name + "=" + value
         body = body[1:]
+
         url = self.url.resolve(elt.attributes["action"])
         self.load(url, body)
